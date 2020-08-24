@@ -33,6 +33,7 @@ app.use('/api', user_routes);
 app.use('/api', follow_routes);
 app.use('/api', publication_routes);
 app.use('/api', message_routes);
+//como caminos
 app.use('/api', comment_routes); 
 
 //exportar

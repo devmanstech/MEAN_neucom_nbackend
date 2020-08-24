@@ -103,12 +103,11 @@ function getPublicationsUser(req, res){
 function getPublication(req, res){
     var publicationId = req.params.id;
 
-    Publication.findById(publicationId, (err, publication) => {
+    Publication.findById(publicationId).sort('create_at').populate('user','-password -role').exec((err, publication) => {
         if(err) return res.status(500).send({message: 'Error al devolver el publicaciones'});
 
         if(!publication) return res.status(404).send({message: 'No existe la publicacion'});
-
-       return res.status(200).send({publication});
+            return res.status(200).send(publication);
     });
 }
 function deletePublication(req, res) {

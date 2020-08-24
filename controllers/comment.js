@@ -1,59 +1,48 @@
 'use strict'
 
 var moment = require('moment');
-var mongoosePaginate = require('mongoose-pagination');
-
-var Comment = require('../models/comment');
-var User = require('../models/user');
 var Follow = require('../models/follow');
+var Comment = require('../models/comment');
 
-/*function commentUser(req,res){
-    res.status(200).send({
-        message: 'Comentarios prueba'
-    });
-}
-*/
-function sendComment(req, res){ //funcion para enviar comentarios
+
+function addComment(req, res){ //agregar comentario
     var params = req.body;
-
-    if(!params.text || !params.receiver) return res.status(200).send({message: 'Comentario publicado exitosamente'});
-
+    if(!params.comment || !params.emitter || !params.publication) return res.status(200).send({message: 'Comentario publicado exitosamente'});
     var comment = new Comment();
-    comment.emmitter = req.user.sub;
-    comment.receiver = req.receiver;
-    comment.text = params.text;
+    comment.emitter = req.user.sub;
+    comment.publication = params.publication;
+    comment.comment = params.comment;
     comment.created_at = moment().unix();
-
     comment.save((err, commentStored) => {
-        if(err)return res.status(500).send({message: 'Error en la peticion'});
-        if(!commentStored)return res.status(500).send({message: 'Error al publicar comentario'});
-
-        res.status(200).send({comment: commentStored}); 
+        if(err)return res.status(500).send({message: 'Error en la peticion',success:false});
+        if(!commentStored)return res.status(500).send({message: 'Error al publicar comentario',success:false});
+        return res.status(200).send({message: 'Guardado con éxito',success:true});
     });
+
 }
 
-function receivedComment(req, res){  //obtener comentarios que nos enviaron
-    var userId = req.body.sub;  //recogemos el ide del usuario que tenemos logueado
-    var page = 1;
-    if(req.params.page){
-        page = req.params.page;
-    }
+function getComments(req, res){  //obtener todos los comentarios
+    var publication = req.body.publication;
+    Follow.find({user:req.user.sub}).populate('followed').exec((err, follows) => {
+        var follows_clean = [];
+        follows.forEach((follow) => {
+            follows_clean.push(follow.followed);
+        });
+        follows_clean.push(req.user.sub);
+        Comment.find({emitter: {"$in": follows_clean}, publication}).sort('-created_at').populate('emitter','-password -role').exec((err, comments) => {
+            if(err) return res.status(500).send({message: 'Error al devolver el publicaciones'});
 
-    var itemsPerPage = 4;
-    //Extraer de la base de datos con find
-    Comment.find({receiver: userId}).populate('emitter').paginate(page, itemsPerPage, (err, comment, total) => {
-        if(err) return res.status(500).send({message: 'Error en la peticion'});
-        if(!comment) return res.status(404).send({message: 'No hay comentarios que mostrar' });
+            if(!comments) return res.status(404).send({message:'No hay publicaciones'});
 
-        return res.status(200).send({
-            total: total,
-            pages: Math.ceil(total/itemsPerPage),
-            comment
-        })
+            return res.status(200).send(
+                comments
+            );
+        });
+
     });
 }
 
 module.exports = {
-    sendComment, 
-    receivedComment
+    addComment,
+    getComments
 }
