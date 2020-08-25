@@ -106,7 +106,7 @@ function getPublication(req, res){
     Publication.findById(publicationId).sort('create_at').populate('user','-password -role').exec((err, publication) => {
         if(err) return res.status(500).send({message: 'Error al devolver el publicaciones'});
 
-        if(!publication) return res.status(404).send({message: 'No existe la publicacion'});
+        if(!publication) return res.status(404).send({message: 'No existe la publicacion',success:false});
             return res.status(200).send(publication);
     });
 }
